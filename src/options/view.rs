@@ -156,7 +156,7 @@ impl TerminalWidth {
     fn deduce<V: Vars>(vars: &V) -> Result<TerminalWidth, Misfire> {
         use options::vars;
 
-        if let Some(columns) = vars.get(vars::COLUMNS).and_then(|s| s.into_string().ok()) {
+        if let Some(columns) = vars.get(vars::COLUMNS) {
             match columns.parse() {
                 Ok(width) => Ok(TerminalWidth::Set(width)),
                 Err(e) => Err(Misfire::FailedParse(e)),
@@ -182,10 +182,7 @@ impl RowThreshold {
     fn deduce<V: Vars>(vars: &V) -> Result<RowThreshold, Misfire> {
         use options::vars;
 
-        if let Some(columns) = vars
-            .get(vars::EXA_GRID_ROWS)
-            .and_then(|s| s.into_string().ok())
-        {
+        if let Some(columns) = vars.get(vars::EXA_GRID_ROWS) {
             match columns.parse() {
                 Ok(rows) => Ok(RowThreshold::MinimumRows(rows)),
                 Err(e) => Err(Misfire::FailedParse(e)),
@@ -258,7 +255,7 @@ impl TimeFormat {
         pub use output::time::{DefaultFormat, ISOFormat};
 
         let word = match matches.get(&flags::TIME_STYLE)? {
-            Some(w) => w.to_os_string(),
+            Some(w) => w.to_string(),
             None => {
                 use options::vars;
                 match vars.get(vars::TIME_STYLE) {
@@ -277,7 +274,7 @@ impl TimeFormat {
         } else if &word == "full-iso" {
             Ok(TimeFormat::FullISO)
         } else {
-            Err(Misfire::BadArgument(&flags::TIME_STYLE, word.into()))
+            Err(Misfire::BadArgument(&flags::TIME_STYLE, word))
         }
     }
 }
@@ -357,7 +354,6 @@ mod test {
     use super::*;
     use options::flags;
     use options::parser::{Arg, Flag};
-    use std::ffi::OsString;
 
     use options::test::parse_for_test;
     use options::test::Strictnesses::*;
@@ -501,7 +497,7 @@ mod test {
         test!(nevermore: TimeFormat <- ["--time-style", "long-iso", "--time-style=full-iso"], None;  Complain => err Misfire::Duplicate(Flag::Long("time-style"), Flag::Long("time-style")));
 
         // Errors
-        test!(daily:     TimeFormat <- ["--time-style=24-hour"], None;  Both => err Misfire::BadArgument(&flags::TIME_STYLE, OsString::from("24-hour")));
+        test!(daily:     TimeFormat <- ["--time-style=24-hour"], None;  Both => err Misfire::BadArgument(&flags::TIME_STYLE, String::from("24-hour")));
 
         // `TIME_STYLE` environment variable is defined.
         // If the time-style argument is not given, `TIME_STYLE` is used.
@@ -539,12 +535,12 @@ mod test {
         test!(time_uu:   TimeTypes <- ["-uU"];                 Both => Ok(TimeTypes { accessed: true,   modified: false,  created: true  }));
 
         // Errors
-        test!(time_tea:  TimeTypes <- ["--time=tea"];          Both => err Misfire::BadArgument(&flags::TIME, OsString::from("tea")));
-        test!(time_ea:   TimeTypes <- ["-tea"];                Both => err Misfire::BadArgument(&flags::TIME, OsString::from("ea")));
+        test!(time_tea:  TimeTypes <- ["--time=tea"];          Both => err Misfire::BadArgument(&flags::TIME, String::from("tea")));
+        test!(time_ea:   TimeTypes <- ["-tea"];                Both => err Misfire::BadArgument(&flags::TIME, String::from("ea")));
 
         // Overriding
         test!(overridden:   TimeTypes <- ["-tcr", "-tmod"];    Last => Ok(TimeTypes { accessed: false,  modified: true,   created: false }));
-        test!(overridden_2: TimeTypes <- ["-tcr", "-tmod"];    Complain => err Misfire::Duplicate(Flag::Short(b't'), Flag::Short(b't')));
+        test!(overridden_2: TimeTypes <- ["-tcr", "-tmod"];    Complain => err Misfire::Duplicate(Flag::Short('t'), Flag::Short('t')));
     }
 
     mod views {
@@ -555,10 +551,10 @@ mod test {
         test!(empty:         Mode <- [], None;            Both => like Ok(Mode::Grid(_)));
 
         // Grid views
-        test!(original_g:    Mode <- ["-G"], None;        Both => like Ok(Mode::Grid(GridOptions { across: false, console_width: _ })));
-        test!(grid:          Mode <- ["--grid"], None;    Both => like Ok(Mode::Grid(GridOptions { across: false, console_width: _ })));
-        test!(across:        Mode <- ["--across"], None;  Both => like Ok(Mode::Grid(GridOptions { across: true,  console_width: _ })));
-        test!(gracross:      Mode <- ["-xG"], None;       Both => like Ok(Mode::Grid(GridOptions { across: true,  console_width: _ })));
+        test!(original_g:    Mode <- ["-G"], None;        Both => like Ok(Mode::Grid(GridOptions { across: false, .. })));
+        test!(grid:          Mode <- ["--grid"], None;    Both => like Ok(Mode::Grid(GridOptions { across: false, .. })));
+        test!(across:        Mode <- ["--across"], None;  Both => like Ok(Mode::Grid(GridOptions { across: true,  .. })));
+        test!(gracross:      Mode <- ["-xG"], None;       Both => like Ok(Mode::Grid(GridOptions { across: true,  .. })));
 
         // Lines views
         test!(lines:         Mode <- ["--oneline"], None; Both => like Ok(Mode::Lines));

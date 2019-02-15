@@ -171,7 +171,7 @@ pub mod test {
 
     #[test]
     fn file_bytes() {
-        let directory = f::Size::Some(1048576);
+        let directory = f::Size::Some(1_048_576);
         let expected = TextCell {
             width: DisplayWidth::from(9),
             contents: vec![Fixed(66).paint("1,048,576")].into(),

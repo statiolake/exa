@@ -8,8 +8,6 @@ use zoneinfo_compiled::{CompiledData, Result as TZResult};
 
 use locale;
 
-use users::UsersCache;
-
 use fs::feature::git::GitCache;
 use fs::{fields as f, File};
 use output::cell::TextCell;
@@ -227,11 +225,11 @@ pub struct Environment {
     tz: Option<TimeZone>,
 
     /// Mapping cache of user IDs to usernames.
-    users: Mutex<UsersCache>,
+    users: Mutex<()>,
 }
 
 impl Environment {
-    pub fn lock_users(&self) -> MutexGuard<UsersCache> {
+    pub fn lock_users(&self) -> MutexGuard<()> {
         self.users.lock().unwrap()
     }
 
@@ -247,7 +245,7 @@ impl Environment {
         let numeric =
             locale::Numeric::load_user_locale().unwrap_or_else(|_| locale::Numeric::english());
 
-        let users = Mutex::new(UsersCache::new());
+        let users = Mutex::new(());
 
         Environment { tz, numeric, users }
     }

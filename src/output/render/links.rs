@@ -56,9 +56,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati
-                .render(&TestColours, &locale::Numeric::english())
-                .into()
+            stati.render(&TestColours, &locale::Numeric::english())
         );
     }
 
@@ -76,9 +74,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati
-                .render(&TestColours, &locale::Numeric::english())
-                .into()
+            stati.render(&TestColours, &locale::Numeric::english())
         );
     }
 
@@ -96,9 +92,7 @@ pub mod test {
 
         assert_eq!(
             expected,
-            stati
-                .render(&TestColours, &locale::Numeric::english())
-                .into()
+            stati.render(&TestColours, &locale::Numeric::english())
         );
     }
 }

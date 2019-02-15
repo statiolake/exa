@@ -3,7 +3,6 @@
 use std::fs;
 use std::io::Error as IOError;
 use std::io::Result as IOResult;
-use std::os::unix::fs::{FileTypeExt, MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 use fs::dir::Dir;
@@ -122,7 +121,7 @@ impl<'dir> File<'dir> {
             }
         }
 
-        return false;
+        false
     }
 
     /// If this file is a directory on the filesystem, then clone its
@@ -145,8 +144,7 @@ impl<'dir> File<'dir> {
     /// current user. An executable file has a different purpose from an
     /// executable directory, so they should be highlighted differently.
     pub fn is_executable_file(&self) -> bool {
-        let bit = modes::USER_EXECUTE;
-        self.is_file() && (self.metadata.permissions().mode() & bit) == bit
+        self.is_file() && self.ext.as_ref().filter(|&x| x == "exe").is_some()
     }
 
     /// Whether this file is a symlink on the filesystem.
@@ -156,22 +154,26 @@ impl<'dir> File<'dir> {
 
     /// Whether this file is a named pipe on the filesystem.
     pub fn is_pipe(&self) -> bool {
-        self.metadata.file_type().is_fifo()
+        // TODO: implement it using WinAPI
+        false
     }
 
     /// Whether this file is a char device on the filesystem.
     pub fn is_char_device(&self) -> bool {
-        self.metadata.file_type().is_char_device()
+        // TODO: what is char device?
+        false
     }
 
     /// Whether this file is a block device on the filesystem.
     pub fn is_block_device(&self) -> bool {
-        self.metadata.file_type().is_block_device()
+        // TODO: implement it using WinAPI
+        false
     }
 
     /// Whether this file is a socket on the filesystem.
     pub fn is_socket(&self) -> bool {
-        self.metadata.file_type().is_socket()
+        // TODO: implement it using WinAPI
+        false
     }
 
     /// Re-prefixes the path pointed to by this file, if it’s a symlink, to
@@ -241,7 +243,8 @@ impl<'dir> File<'dir> {
     /// with multiple links much more often. Thus, it should get highlighted
     /// more attentively.
     pub fn links(&self) -> f::Links {
-        let count = self.metadata.nlink();
+        // TODO: implement it using WinAPI
+        let count = 0;
 
         f::Links {
             count,
@@ -251,7 +254,8 @@ impl<'dir> File<'dir> {
 
     /// This file's inode.
     pub fn inode(&self) -> f::Inode {
-        f::Inode(self.metadata.ino())
+        // TODO: implement it
+        f::Inode(0)
     }
 
     /// This file's number of filesystem blocks.
@@ -259,7 +263,8 @@ impl<'dir> File<'dir> {
     /// (Not the size of each block, which we don't actually report on)
     pub fn blocks(&self) -> f::Blocks {
         if self.is_file() || self.is_link() {
-            f::Blocks::Some(self.metadata.blocks())
+            // TODO: implement it
+            f::Blocks::Some(0)
         } else {
             f::Blocks::None
         }
@@ -267,12 +272,14 @@ impl<'dir> File<'dir> {
 
     /// The ID of the user that own this file.
     pub fn user(&self) -> f::User {
-        f::User(self.metadata.uid())
+        // TODO: implement it
+        f::User(0)
     }
 
     /// The ID of the group that owns this file.
     pub fn group(&self) -> f::Group {
-        f::Group(self.metadata.gid())
+        // TODO: implement it
+        f::Group(0)
     }
 
     /// This file’s size, if it’s a regular file.
@@ -287,7 +294,8 @@ impl<'dir> File<'dir> {
         if self.is_directory() {
             f::Size::None
         } else if self.is_char_device() || self.is_block_device() {
-            let dev = self.metadata.rdev();
+            // TODO: implement it
+            let dev = 0;
             f::Size::DeviceIDs(f::DeviceIDs {
                 major: (dev / 256) as u8,
                 minor: (dev % 256) as u8,
@@ -299,25 +307,28 @@ impl<'dir> File<'dir> {
 
     /// This file’s last modified timestamp.
     pub fn modified_time(&self) -> f::Time {
+        // TODO: impelement it
         f::Time {
-            seconds: self.metadata.mtime(),
-            nanoseconds: self.metadata.mtime_nsec(),
+            seconds: 0,
+            nanoseconds: 0,
         }
     }
 
     /// This file’s created timestamp.
     pub fn created_time(&self) -> f::Time {
+        // TODO: impelement it
         f::Time {
-            seconds: self.metadata.ctime(),
-            nanoseconds: self.metadata.ctime_nsec(),
+            seconds: 0,
+            nanoseconds: 0,
         }
     }
 
     /// This file’s last accessed timestamp.
     pub fn accessed_time(&self) -> f::Time {
+        // TODO: impelement it
         f::Time {
-            seconds: self.metadata.atime(),
-            nanoseconds: self.metadata.atime_nsec(),
+            seconds: 0,
+            nanoseconds: 0,
         }
     }
 
@@ -348,25 +359,23 @@ impl<'dir> File<'dir> {
 
     /// This file’s permissions, with flags for each bit.
     pub fn permissions(&self) -> f::Permissions {
-        let bits = self.metadata.mode();
-        let has_bit = |bit| bits & bit == bit;
-
+        // TODO: Rewrite them using WinAPI.
         f::Permissions {
-            user_read: has_bit(modes::USER_READ),
-            user_write: has_bit(modes::USER_WRITE),
-            user_execute: has_bit(modes::USER_EXECUTE),
+            user_read: true,
+            user_write: true,
+            user_execute: true,
 
-            group_read: has_bit(modes::GROUP_READ),
-            group_write: has_bit(modes::GROUP_WRITE),
-            group_execute: has_bit(modes::GROUP_EXECUTE),
+            group_read: true,
+            group_write: true,
+            group_execute: true,
 
-            other_read: has_bit(modes::OTHER_READ),
-            other_write: has_bit(modes::OTHER_WRITE),
-            other_execute: has_bit(modes::OTHER_EXECUTE),
+            other_read: true,
+            other_write: true,
+            other_execute: true,
 
-            sticky: has_bit(modes::STICKY),
-            setgid: has_bit(modes::SETGID),
-            setuid: has_bit(modes::SETUID),
+            sticky: false,
+            setgid: false,
+            setuid: false,
         }
     }
 
@@ -425,27 +434,9 @@ impl<'dir> FileTarget<'dir> {
 /// More readable aliases for the permission bits exposed by libc.
 #[allow(trivial_numeric_casts)]
 mod modes {
-    use libc;
 
-    pub type Mode = u32;
     // The `libc::mode_t` type’s actual type varies, but the value returned
     // from `metadata.permissions().mode()` is always `u32`.
-
-    pub const USER_READ: Mode = libc::S_IRUSR as Mode;
-    pub const USER_WRITE: Mode = libc::S_IWUSR as Mode;
-    pub const USER_EXECUTE: Mode = libc::S_IXUSR as Mode;
-
-    pub const GROUP_READ: Mode = libc::S_IRGRP as Mode;
-    pub const GROUP_WRITE: Mode = libc::S_IWGRP as Mode;
-    pub const GROUP_EXECUTE: Mode = libc::S_IXGRP as Mode;
-
-    pub const OTHER_READ: Mode = libc::S_IROTH as Mode;
-    pub const OTHER_WRITE: Mode = libc::S_IWOTH as Mode;
-    pub const OTHER_EXECUTE: Mode = libc::S_IXOTH as Mode;
-
-    pub const STICKY: Mode = libc::S_ISVTX as Mode;
-    pub const SETGID: Mode = libc::S_ISGID as Mode;
-    pub const SETUID: Mode = libc::S_ISUID as Mode;
 }
 
 #[cfg(test)]

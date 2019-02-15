@@ -39,17 +39,14 @@ impl fmt::Display for VersionString {
 #[cfg(test)]
 mod test {
     use options::Options;
-    use std::ffi::OsString;
 
-    fn os(input: &'static str) -> OsString {
-        let mut os = OsString::new();
-        os.push(input);
-        os
+    fn tos(input: &'static str) -> String {
+        input.into()
     }
 
     #[test]
     fn help() {
-        let args = [os("--version")];
+        let args = [tos("--version")];
         let opts = Options::parse(&args, &None);
         assert!(opts.is_err())
     }

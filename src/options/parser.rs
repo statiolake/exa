@@ -16,9 +16,9 @@
 //! very little: all it really needs to do is parse a slice of strings.
 //!
 //!
-//! ## UTF-8 and `OsStr`
+//! ## UTF-8 and `str`
 //!
-//! The parser uses `OsStr` as its string type. This is necessary for exa to
+//! The parser uses `str` as its string type. This is necessary for exa to
 //! list files that have invalid UTF-8 in their names: by treating file paths
 //! as bytes with no encoding, a file can be specified on the command-line and
 //! be looked up without having to be encoded into a `str` first.
@@ -27,16 +27,15 @@
 //! command-line options, as all the options and their values (such as
 //! `--sort size`) are guaranteed to just be 8-bit ASCII.
 
-use std::ffi::{OsStr, OsString};
 use std::fmt;
 
 use options::Misfire;
 
 /// A **short argument** is a single ASCII character.
-pub type ShortArg = u8;
+pub type ShortArg = char;
 
 /// A **long argument** is a string. This can be a UTF-8 string, even though
-/// the arguments will all be unchecked OsStrings, because we don’t actually
+/// the arguments will all be unchecked Strings, because we don’t actually
 /// store the user’s input after it’s been matched to a flag, we just store
 /// which flag it was.
 pub type LongArg = &'static str;
@@ -68,7 +67,7 @@ impl Flag {
 impl fmt::Display for Flag {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            Flag::Short(short) => write!(f, "-{}", short as char),
+            Flag::Short(short) => write!(f, "-{}", short),
             Flag::Long(long) => write!(f, "--{}", long),
         }
     }
@@ -118,7 +117,7 @@ impl fmt::Display for Arg {
         write!(f, "--{}", self.long)?;
 
         if let Some(short) = self.short {
-            write!(f, " (-{})", short as char)?;
+            write!(f, " (-{})", short)?;
         }
 
         Ok(())
@@ -138,24 +137,21 @@ impl Args {
         strictness: Strictness,
     ) -> Result<Matches<'args>, ParseError>
     where
-        I: IntoIterator<Item = &'args OsString>,
+        I: IntoIterator<Item = &'args String>,
     {
         use self::TakesValue::*;
-        use std::os::unix::ffi::OsStrExt;
 
         let mut parsing = true;
 
         // The results that get built up.
         let mut result_flags = Vec::new();
-        let mut frees: Vec<&OsStr> = Vec::new();
+        let mut frees: Vec<&str> = Vec::new();
 
         // Iterate over the inputs with “while let” because we need to advance
         // the iterator manually whenever an argument that takes a value
         // doesn’t have one in its string so it needs the next one.
         let mut inputs = inputs.into_iter();
         while let Some(arg) = inputs.next() {
-            let bytes = arg.as_bytes();
-
             // Stop parsing if one of the arguments is the literal string “--”.
             // This allows a file named “--arg” to be specified by passing in
             // the pair “-- --arg”, without it getting matched as a flag that
@@ -166,8 +162,8 @@ impl Args {
                 parsing = false;
             }
             // If the string starts with *two* dashes then it’s a long argument.
-            else if bytes.starts_with(b"--") {
-                let long_arg_name = OsStr::from_bytes(&bytes[2..]);
+            else if arg.starts_with("--") {
+                let long_arg_name = &arg[2..];
 
                 // If there’s an equals in it, then the string before the
                 // equals will be the flag’s name, and the string after it
@@ -199,8 +195,8 @@ impl Args {
             }
             // If the string starts with *one* dash then it’s one or more
             // short arguments.
-            else if bytes.starts_with(b"-") && arg != "-" {
-                let short_arg = OsStr::from_bytes(&bytes[1..]);
+            else if arg.starts_with('-') && arg != "-" {
+                let short_arg = &arg[1..];
 
                 // If there’s an equals in it, then the argument immediately
                 // before the equals was the one that has the value, with the
@@ -215,12 +211,14 @@ impl Args {
                 // it’s an error if any of the first set of arguments actually
                 // takes a value.
                 if let Some((before, after)) = split_on_equals(short_arg) {
-                    let (arg_with_value, other_args) = before.as_bytes().split_last().unwrap();
+                    let (&arg_with_value, other_args) = before.as_bytes().split_last().unwrap();
+                    let arg_with_value = arg_with_value as char;
 
                     // Process the characters immediately following the dash...
-                    for byte in other_args {
-                        let arg = self.lookup_short(*byte)?;
-                        let flag = Flag::Short(*byte);
+                    for &byte in other_args {
+                        let ch = byte as char;
+                        let arg = self.lookup_short(ch)?;
+                        let flag = Flag::Short(ch);
                         match arg.takes_value {
                             Forbidden => result_flags.push((flag, None)),
                             Necessary(values) => {
@@ -230,7 +228,7 @@ impl Args {
                     }
 
                     // ...then the last one and the value after the equals.
-                    let arg = self.lookup_short(*arg_with_value)?;
+                    let arg = self.lookup_short(arg_with_value)?;
                     let flag = Flag::Short(arg.short.unwrap());
                     match arg.takes_value {
                         Necessary(_) => result_flags.push((flag, Some(after))),
@@ -250,15 +248,16 @@ impl Args {
                 //   -abx      =>  error
                 //
                 else {
-                    for (index, byte) in bytes.into_iter().enumerate().skip(1) {
-                        let arg = self.lookup_short(*byte)?;
-                        let flag = Flag::Short(*byte);
+                    let argstr = arg;
+                    for (index, ch) in argstr.chars().enumerate().skip(1) {
+                        let arg = self.lookup_short(ch)?;
+                        let flag = Flag::Short(ch);
                         match arg.takes_value {
                             Forbidden => result_flags.push((flag, None)),
                             Necessary(values) => {
-                                if index < bytes.len() - 1 {
-                                    let remnants = &bytes[index + 1..];
-                                    result_flags.push((flag, Some(OsStr::from_bytes(remnants))));
+                                if index < argstr.len() - 1 {
+                                    let remnants = &argstr[index + 1..];
+                                    result_flags.push((flag, Some(remnants)));
                                     break;
                                 } else if let Some(next_arg) = inputs.next() {
                                     result_flags.push((flag, Some(next_arg)));
@@ -286,17 +285,17 @@ impl Args {
     }
 
     fn lookup_short(&self, short: ShortArg) -> Result<&Arg, ParseError> {
-        match self.0.into_iter().find(|arg| arg.short == Some(short)) {
+        match self.0.iter().find(|arg| arg.short == Some(short)) {
             Some(arg) => Ok(arg),
             None => Err(ParseError::UnknownShortArgument { attempt: short }),
         }
     }
 
-    fn lookup_long<'b>(&self, long: &'b OsStr) -> Result<&Arg, ParseError> {
-        match self.0.into_iter().find(|arg| arg.long == long) {
+    fn lookup_long<'b>(&self, long: &'b str) -> Result<&Arg, ParseError> {
+        match self.0.iter().find(|arg| arg.long == long) {
             Some(arg) => Ok(arg),
             None => Err(ParseError::UnknownArgument {
-                attempt: long.to_os_string(),
+                attempt: long.to_string(),
             }),
         }
     }
@@ -310,7 +309,7 @@ pub struct Matches<'args> {
 
     /// All the strings that weren’t matched as arguments, as well as anything
     /// after the special "--" string.
-    pub frees: Vec<&'args OsStr>,
+    pub frees: Vec<&'args str>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -321,7 +320,7 @@ pub struct MatchedFlags<'args> {
     /// Long and short arguments need to be kept in the same vector because
     /// we usually want the one nearest the end to count, and to know this,
     /// we need to know where they are in relation to one another.
-    flags: Vec<(Flag, Option<&'args OsStr>)>,
+    flags: Vec<(Flag, Option<&'args str>)>,
 
     /// Whether to check for duplicate or redundant arguments.
     strictness: Strictness,
@@ -375,7 +374,7 @@ impl<'a> MatchedFlags<'a> {
     /// Returns the value of the given argument if it was specified, nothing
     /// if it wasn’t, and an error in strict mode if it was specified more
     /// than once.
-    pub fn get(&self, arg: &'static Arg) -> Result<Option<&OsStr>, Misfire> {
+    pub fn get(&self, arg: &'static Arg) -> Result<Option<&str>, Misfire> {
         self.get_where(|flag| flag.matches(arg))
     }
 
@@ -384,7 +383,7 @@ impl<'a> MatchedFlags<'a> {
     /// multiple arguments matched the predicate.
     ///
     /// It’s not possible to tell which flag the value belonged to from this.
-    pub fn get_where<P>(&self, predicate: P) -> Result<Option<&OsStr>, Misfire>
+    pub fn get_where<P>(&self, predicate: P) -> Result<Option<&str>, Misfire>
     where
         P: Fn(&Flag) -> bool,
     {
@@ -447,48 +446,44 @@ pub enum ParseError {
     /// A long argument was not recognised by the program.
     /// We don’t have a known &str version of the flag, so
     /// this may not be valid UTF-8.
-    UnknownArgument { attempt: OsString },
+    UnknownArgument { attempt: String },
 }
 
 // It’s technically possible for ParseError::UnknownArgument to borrow its
-// OsStr rather than owning it, but that would give ParseError a lifetime,
+// str rather than owning it, but that would give ParseError a lifetime,
 // which would give Misfire a lifetime, which gets used everywhere. And this
 // only happens when an error occurs, so it’s not really worth it.
 
 /// Splits a string on its `=` character, returning the two substrings on
 /// either side. Returns `None` if there’s no equals or a string is missing.
-fn split_on_equals(input: &OsStr) -> Option<(&OsStr, &OsStr)> {
-    use std::os::unix::ffi::OsStrExt;
-
-    if let Some(index) = input.as_bytes().iter().position(|elem| *elem == b'=') {
-        let (before, after) = input.as_bytes().split_at(index);
+fn split_on_equals(input: &str) -> Option<(&str, &str)> {
+    if let Some(index) = input.chars().position(|elem| elem == '=') {
+        let (before, after) = input.split_at(index);
 
         // The after string contains the = that we need to remove.
         if !before.is_empty() && after.len() >= 2 {
-            return Some((OsStr::from_bytes(before), OsStr::from_bytes(&after[1..])));
+            return Some((before, &after[1..]));
         }
     }
 
     None
 }
 
-/// Creates an `OSString` (used in tests)
+/// Creates an `String` (used in tests)
 #[cfg(test)]
-fn os(input: &'static str) -> OsString {
-    let mut os = OsString::new();
-    os.push(input);
-    os
+fn tos(input: &'static str) -> String {
+    input.into()
 }
 
 #[cfg(test)]
 mod split_test {
-    use super::{os, split_on_equals};
+    use super::{split_on_equals, tos};
 
     macro_rules! test_split {
         ($name:ident: $input:expr => None) => {
             #[test]
             fn $name() {
-                assert_eq!(split_on_equals(&os($input)), None);
+                assert_eq!(split_on_equals(&tos($input)), None);
             }
         };
 
@@ -496,8 +491,8 @@ mod split_test {
             #[test]
             fn $name() {
                 assert_eq!(
-                    split_on_equals(&os($input)),
-                    Some((&*os($before), &*os($after)))
+                    split_on_equals(&tos($input)),
+                    Some((&*tos($before), &*tos($after)))
                 );
             }
         };
@@ -519,22 +514,22 @@ mod split_test {
 mod parse_test {
     use super::*;
 
-    pub fn os(input: &'static str) -> OsString {
-        let mut os = OsString::new();
-        os.push(input);
-        os
+    pub fn tos(input: &'static str) -> String {
+        let mut tos = String::new();
+        tos.push_str(input);
+        tos
     }
 
     macro_rules! test {
         ($name:ident: $inputs:expr => frees: $frees:expr, flags: $flags:expr) => {
             #[test]
             fn $name() {
-                // Annoyingly the input &strs need to be converted to OsStrings
-                let inputs: Vec<OsString> = $inputs.as_ref().into_iter().map(|&o| os(o)).collect();
+                // Annoyingly the input &strs need to be converted to Strings
+                let inputs: Vec<String> = $inputs.as_ref().into_iter().map(|&o| tos(o)).collect();
 
                 // Same with the frees
-                let frees: Vec<OsString> = $frees.as_ref().into_iter().map(|&o| os(o)).collect();
-                let frees: Vec<&OsStr> = frees.iter().map(|os| os.as_os_str()).collect();
+                let frees: Vec<String> = $frees.as_ref().into_iter().map(|&o| tos(o)).collect();
+                let frees: Vec<&str> = frees.iter().map(|tos| tos.as_str()).collect();
 
                 let flags = <[_]>::into_vec(Box::new($flags));
 
@@ -557,8 +552,8 @@ mod parse_test {
                 let bits = $inputs
                     .as_ref()
                     .into_iter()
-                    .map(|&o| os(o))
-                    .collect::<Vec<OsString>>();
+                    .map(|&o| tos(o))
+                    .collect::<Vec<String>>();
                 let got = Args(TEST_ARGS).parse(bits.iter(), strictness);
 
                 assert_eq!(got, Err($error));
@@ -570,22 +565,22 @@ mod parse_test {
 
     static TEST_ARGS: &[&Arg] = &[
         &Arg {
-            short: Some(b'l'),
+            short: Some('l'),
             long: "long",
             takes_value: TakesValue::Forbidden,
         },
         &Arg {
-            short: Some(b'v'),
+            short: Some('v'),
             long: "verbose",
             takes_value: TakesValue::Forbidden,
         },
         &Arg {
-            short: Some(b'c'),
+            short: Some('c'),
             long: "count",
             takes_value: TakesValue::Necessary(None),
         },
         &Arg {
-            short: Some(b't'),
+            short: Some('t'),
             long: "type",
             takes_value: TakesValue::Necessary(Some(SUGGESTIONS)),
         },
@@ -610,42 +605,42 @@ mod parse_test {
     // Long args with values
     test!(bad_equals:  ["--long=equals"]  => error ForbiddenValue { flag: Flag::Long("long") });
     test!(no_arg:      ["--count"]        => error NeedsValue     { flag: Flag::Long("count"), values: None });
-    test!(arg_equals:  ["--count=4"]      => frees: [],  flags: [ (Flag::Long("count"), Some(OsStr::new("4"))) ]);
-    test!(arg_then:    ["--count", "4"]   => frees: [],  flags: [ (Flag::Long("count"), Some(OsStr::new("4"))) ]);
+    test!(arg_equals:  ["--count=4"]      => frees: [],  flags: [ (Flag::Long("count"), Some("4")) ]);
+    test!(arg_then:    ["--count", "4"]   => frees: [],  flags: [ (Flag::Long("count"), Some("4")) ]);
 
     // Long args with values and suggestions
     test!(no_arg_s:      ["--type"]         => error NeedsValue { flag: Flag::Long("type"), values: Some(SUGGESTIONS) });
-    test!(arg_equals_s:  ["--type=exa"]     => frees: [],  flags: [ (Flag::Long("type"), Some(OsStr::new("exa"))) ]);
-    test!(arg_then_s:    ["--type", "exa"]  => frees: [],  flags: [ (Flag::Long("type"), Some(OsStr::new("exa"))) ]);
+    test!(arg_equals_s:  ["--type=exa"]     => frees: [],  flags: [ (Flag::Long("type"), Some("exa")) ]);
+    test!(arg_then_s:    ["--type", "exa"]  => frees: [],  flags: [ (Flag::Long("type"), Some("exa")) ]);
 
     // Short args
-    test!(short:       ["-l"]            => frees: [],       flags: [ (Flag::Short(b'l'), None) ]);
-    test!(short_then:  ["-l", "4"]       => frees: [ "4" ],  flags: [ (Flag::Short(b'l'), None) ]);
-    test!(short_two:   ["-lv"]           => frees: [],       flags: [ (Flag::Short(b'l'), None), (Flag::Short(b'v'), None) ]);
-    test!(mixed:       ["-v", "--long"]  => frees: [],       flags: [ (Flag::Short(b'v'), None), (Flag::Long("long"), None) ]);
+    test!(short:       ["-l"]            => frees: [],       flags: [ (Flag::Short('l'), None) ]);
+    test!(short_then:  ["-l", "4"]       => frees: [ "4" ],  flags: [ (Flag::Short('l'), None) ]);
+    test!(short_two:   ["-lv"]           => frees: [],       flags: [ (Flag::Short('l'), None), (Flag::Short('v'), None) ]);
+    test!(mixed:       ["-v", "--long"]  => frees: [],       flags: [ (Flag::Short('v'), None), (Flag::Long("long"), None) ]);
 
     // Short args with values
-    test!(bad_short:          ["-l=equals"]   => error ForbiddenValue { flag: Flag::Short(b'l') });
-    test!(short_none:         ["-c"]          => error NeedsValue     { flag: Flag::Short(b'c'), values: None });
-    test!(short_arg_eq:       ["-c=4"]        => frees: [],  flags: [(Flag::Short(b'c'), Some(OsStr::new("4"))) ]);
-    test!(short_arg_then:     ["-c", "4"]     => frees: [],  flags: [(Flag::Short(b'c'), Some(OsStr::new("4"))) ]);
-    test!(short_two_together: ["-lctwo"]      => frees: [],  flags: [(Flag::Short(b'l'), None), (Flag::Short(b'c'), Some(OsStr::new("two"))) ]);
-    test!(short_two_equals:   ["-lc=two"]     => frees: [],  flags: [(Flag::Short(b'l'), None), (Flag::Short(b'c'), Some(OsStr::new("two"))) ]);
-    test!(short_two_next:     ["-lc", "two"]  => frees: [],  flags: [(Flag::Short(b'l'), None), (Flag::Short(b'c'), Some(OsStr::new("two"))) ]);
+    test!(bad_short:          ["-l=equals"]   => error ForbiddenValue { flag: Flag::Short('l') });
+    test!(short_none:         ["-c"]          => error NeedsValue     { flag: Flag::Short('c'), values: None });
+    test!(short_arg_eq:       ["-c=4"]        => frees: [],  flags: [(Flag::Short('c'), Some("4")) ]);
+    test!(short_arg_then:     ["-c", "4"]     => frees: [],  flags: [(Flag::Short('c'), Some("4")) ]);
+    test!(short_two_together: ["-lctwo"]      => frees: [],  flags: [(Flag::Short('l'), None), (Flag::Short('c'), Some("two")) ]);
+    test!(short_two_equals:   ["-lc=two"]     => frees: [],  flags: [(Flag::Short('l'), None), (Flag::Short('c'), Some("two")) ]);
+    test!(short_two_next:     ["-lc", "two"]  => frees: [],  flags: [(Flag::Short('l'), None), (Flag::Short('c'), Some("two")) ]);
 
     // Short args with values and suggestions
-    test!(short_none_s:         ["-t"]         => error NeedsValue { flag: Flag::Short(b't'), values: Some(SUGGESTIONS) });
-    test!(short_two_together_s: ["-texa"]      => frees: [],  flags: [(Flag::Short(b't'), Some(OsStr::new("exa"))) ]);
-    test!(short_two_equals_s:   ["-t=exa"]     => frees: [],  flags: [(Flag::Short(b't'), Some(OsStr::new("exa"))) ]);
-    test!(short_two_next_s:     ["-t", "exa"]  => frees: [],  flags: [(Flag::Short(b't'), Some(OsStr::new("exa"))) ]);
+    test!(short_none_s:         ["-t"]         => error NeedsValue { flag: Flag::Short('t'), values: Some(SUGGESTIONS) });
+    test!(short_two_together_s: ["-texa"]      => frees: [],  flags: [(Flag::Short('t'), Some("exa")) ]);
+    test!(short_two_equals_s:   ["-t=exa"]     => frees: [],  flags: [(Flag::Short('t'), Some("exa")) ]);
+    test!(short_two_next_s:     ["-t", "exa"]  => frees: [],  flags: [(Flag::Short('t'), Some("exa")) ]);
 
     // Unknown args
-    test!(unknown_long:          ["--quiet"]      => error UnknownArgument      { attempt: os("quiet") });
-    test!(unknown_long_eq:       ["--quiet=shhh"] => error UnknownArgument      { attempt: os("quiet") });
-    test!(unknown_short:         ["-q"]           => error UnknownShortArgument { attempt: b'q' });
-    test!(unknown_short_2nd:     ["-lq"]          => error UnknownShortArgument { attempt: b'q' });
-    test!(unknown_short_eq:      ["-q=shhh"]      => error UnknownShortArgument { attempt: b'q' });
-    test!(unknown_short_2nd_eq:  ["-lq=shhh"]     => error UnknownShortArgument { attempt: b'q' });
+    test!(unknown_long:          ["--quiet"]      => error UnknownArgument      { attempt: tos("quiet") });
+    test!(unknown_long_eq:       ["--quiet=shhh"] => error UnknownArgument      { attempt: tos("quiet") });
+    test!(unknown_short:         ["-q"]           => error UnknownShortArgument { attempt: 'q' });
+    test!(unknown_short_2nd:     ["-lq"]          => error UnknownShortArgument { attempt: 'q' });
+    test!(unknown_short_eq:      ["-q=shhh"]      => error UnknownShortArgument { attempt: 'q' });
+    test!(unknown_short_2nd_eq:  ["-lq=shhh"]     => error UnknownShortArgument { attempt: 'q' });
 }
 
 #[cfg(test)]
@@ -667,29 +662,29 @@ mod matches_test {
     }
 
     static VERBOSE: Arg = Arg {
-        short: Some(b'v'),
+        short: Some('v'),
         long: "verbose",
         takes_value: TakesValue::Forbidden,
     };
     static COUNT: Arg = Arg {
-        short: Some(b'c'),
+        short: Some('c'),
         long: "count",
         takes_value: TakesValue::Necessary(None),
     };
 
     test!(short_never:  [],                                                              has VERBOSE => false);
-    test!(short_once:   [(Flag::Short(b'v'), None)],                                     has VERBOSE => true);
-    test!(short_twice:  [(Flag::Short(b'v'), None), (Flag::Short(b'v'), None)],          has VERBOSE => true);
+    test!(short_once:   [(Flag::Short('v'), None)],                                     has VERBOSE => true);
+    test!(short_twice:  [(Flag::Short('v'), None), (Flag::Short('v'), None)],          has VERBOSE => true);
     test!(long_once:    [(Flag::Long("verbose"), None)],                                 has VERBOSE => true);
     test!(long_twice:   [(Flag::Long("verbose"), None), (Flag::Long("verbose"), None)],  has VERBOSE => true);
-    test!(long_mixed:   [(Flag::Long("verbose"), None), (Flag::Short(b'v'), None)],      has VERBOSE => true);
+    test!(long_mixed:   [(Flag::Long("verbose"), None), (Flag::Short('v'), None)],      has VERBOSE => true);
 
     #[test]
     fn only_count() {
-        let everything = os("everything");
+        let everything = tos("everything");
 
         let flags = MatchedFlags {
-            flags: vec![(Flag::Short(b'c'), Some(&*everything))],
+            flags: vec![(Flag::Short('c'), Some(&*everything))],
             strictness: Strictness::UseLastArguments,
         };
 
@@ -698,13 +693,13 @@ mod matches_test {
 
     #[test]
     fn rightmost_count() {
-        let everything = os("everything");
-        let nothing = os("nothing");
+        let everything = tos("everything");
+        let nothing = tos("nothing");
 
         let flags = MatchedFlags {
             flags: vec![
-                (Flag::Short(b'c'), Some(&*everything)),
-                (Flag::Short(b'c'), Some(&*nothing)),
+                (Flag::Short('c'), Some(&*everything)),
+                (Flag::Short('c'), Some(&*nothing)),
             ],
             strictness: Strictness::UseLastArguments,
         };

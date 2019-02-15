@@ -49,7 +49,7 @@ impl RecurseOptions {
     /// will fail with an `Err` if it isn’t.
     pub fn deduce(matches: &MatchedFlags, tree: bool) -> Result<RecurseOptions, Misfire> {
         let max_depth = if let Some(level) = matches.get(&flags::LEVEL)? {
-            match level.to_string_lossy().parse() {
+            match level.parse() {
                 Ok(l) => Some(l),
                 Err(e) => return Err(Misfire::FailedParse(e)),
             }
@@ -120,5 +120,5 @@ mod test {
 
     // Overriding levels
     test!(overriding_1:    DirAction <- ["-RL=6", "-L=7"];                Last => Ok(Recurse(RecurseOptions { tree: false, max_depth: Some(7) })));
-    test!(overriding_2:    DirAction <- ["-RL=6", "-L=7"];            Complain => Err(Misfire::Duplicate(Flag::Short(b'L'), Flag::Short(b'L'))));
+    test!(overriding_2:    DirAction <- ["-RL=6", "-L=7"];            Complain => Err(Misfire::Duplicate(Flag::Short('L'), Flag::Short('L'))));
 }

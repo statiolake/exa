@@ -1,4 +1,3 @@
-use std::ffi::OsString;
 use std::fmt;
 use std::num::ParseIntError;
 
@@ -15,7 +14,7 @@ pub enum Misfire {
     InvalidOptions(ParseError),
 
     /// The user supplied an illegal choice to an Argument.
-    BadArgument(&'static Arg, OsString),
+    BadArgument(&'static Arg, String),
 
     /// The user asked for help. This isn’t strictly an error, which is why
     /// this enum isn’t named Error!
@@ -125,12 +124,8 @@ impl fmt::Display for ParseError {
                 values: Some(cs),
             } => write!(f, "Flag {} needs a value ({})", flag, Choices(cs)),
             ForbiddenValue { ref flag } => write!(f, "Flag {} cannot take a value", flag),
-            UnknownShortArgument { ref attempt } => {
-                write!(f, "Unknown argument -{}", *attempt as char)
-            }
-            UnknownArgument { ref attempt } => {
-                write!(f, "Unknown argument --{}", attempt.to_string_lossy())
-            }
+            UnknownShortArgument { ref attempt } => write!(f, "Unknown argument -{}", attempt),
+            UnknownArgument { ref attempt } => write!(f, "Unknown argument --{}", attempt),
         }
     }
 }
@@ -145,7 +140,7 @@ impl Misfire {
                 Some("To sort oldest files last, try \"--sort oldest\", or just \"-sold\"")
             }
             Misfire::InvalidOptions(ParseError::NeedsValue { ref flag, .. })
-                if *flag == Flag::Short(b't') =>
+                if *flag == Flag::Short('t') =>
             {
                 Some("To sort newest files last, try \"--sort newest\", or just \"-snew\"")
             }

@@ -126,6 +126,7 @@ impl<'dir, 'ig> Files<'dir, 'ig> {
 
 /// The dot directories that need to be listed before actual files, if any.
 /// If these aren’t being printed, then `FilesNext` is used to skip them.
+#[allow(clippy::enum_variant_names)]
 enum Dots {
     /// List the `.` directory next.
     DotNext,

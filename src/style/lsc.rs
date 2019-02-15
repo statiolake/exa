@@ -94,7 +94,7 @@ impl<'var> Pair<'var> {
         let mut iter = self.value.split(';').peekable();
 
         while let Some(num) = iter.next() {
-            match num.trim_left_matches('0') {
+            match num.trim_start_matches('0') {
                 // Bold and italic
                 "1" => style = style.bold(),
                 "2" => style = style.dimmed(),

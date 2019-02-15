@@ -51,6 +51,7 @@ pub mod test {
         fn not_modified(&self) -> Style {
             Fixed(90).normal()
         }
+        #[allow(clippy::new_ret_no_self)]
         fn new(&self) -> Style {
             Fixed(91).normal()
         }
@@ -83,21 +84,6 @@ pub mod test {
             contents: vec![Fixed(90).paint("-"), Fixed(90).paint("-")].into(),
         };
 
-        assert_eq!(expected, stati.render(&TestColours).into())
-    }
-
-    #[test]
-    fn git_new_changed() {
-        let stati = f::Git {
-            staged: f::GitStatus::New,
-            unstaged: f::GitStatus::Modified,
-        };
-
-        let expected = TextCell {
-            width: DisplayWidth::from(2),
-            contents: vec![Fixed(91).paint("N"), Fixed(92).paint("M")].into(),
-        };
-
-        assert_eq!(expected, stati.render(&TestColours).into())
+        assert_eq!(expected, stati.render(&TestColours))
     }
 }

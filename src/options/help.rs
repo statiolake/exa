@@ -120,24 +120,21 @@ impl fmt::Display for HelpString {
 #[cfg(test)]
 mod test {
     use options::Options;
-    use std::ffi::OsString;
 
-    fn os(input: &'static str) -> OsString {
-        let mut os = OsString::new();
-        os.push(input);
-        os
+    fn tos(input: &'static str) -> String {
+        input.into()
     }
 
     #[test]
     fn help() {
-        let args = [os("--help")];
+        let args = [tos("--help")];
         let opts = Options::parse(&args, &None);
         assert!(opts.is_err())
     }
 
     #[test]
     fn help_with_file() {
-        let args = [os("--help"), os("me")];
+        let args = [tos("--help"), tos("me")];
         let opts = Options::parse(&args, &None);
         assert!(opts.is_err())
     }

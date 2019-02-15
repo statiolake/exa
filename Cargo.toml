@@ -47,17 +47,8 @@ zoneinfo_compiled = "0.4.7"
 [build-dependencies]
 datetime = "0.4.7"
 
-# [features]
-# default = [ "git" ]
-# git = [ "git2" ]
-
 [profile.release]
 opt-level = 3
 debug = false
 lto = true
 panic = "abort"
-
-# [dependencies.git2]
-# version = "0.7"
-# optional = true
-# default-features = false

@@ -32,7 +32,7 @@ impl SortField {
             None => return Ok(SortField::default()),
         };
 
-        // The field is an OsStr, so can’t be matched.
+        // The field is an str, so can’t be matched.
         if word == "name" || word == "filename" {
             Ok(SortField::Name(SortCase::AaBbCc))
         } else if word == "Name" || word == "Filename" {
@@ -156,8 +156,7 @@ impl IgnorePatterns {
 
         // Awkwardly, though, a glob pattern can be invalid, and we need to
         // deal with invalid patterns somehow.
-        let (patterns, mut errors) =
-            IgnorePatterns::parse_from_iter(inputs.to_string_lossy().split('|'));
+        let (patterns, mut errors) = IgnorePatterns::parse_from_iter(inputs.split('|'));
 
         // It can actually return more than one glob error,
         // but we only use one. (TODO)
@@ -183,7 +182,6 @@ mod test {
     use super::*;
     use options::flags;
     use options::parser::Flag;
-    use std::ffi::OsString;
 
     macro_rules! test {
         ($name:ident: $type:ident <- $inputs:expr; $stricts:expr => $result:expr) => {
@@ -231,7 +229,7 @@ mod test {
         test!(mix_hidden_uppercase:     SortField <- ["--sort", ".Name"];  Both => Ok(SortField::NameMixHidden(SortCase::ABCabc)));
 
         // Errors
-        test!(error:         SortField <- ["--sort=colour"];   Both => Err(Misfire::BadArgument(&flags::SORT, OsString::from("colour"))));
+        test!(error:         SortField <- ["--sort=colour"];   Both => Err(Misfire::BadArgument(&flags::SORT, String::from("colour"))));
 
         // Overriding
         test!(overridden:    SortField <- ["--sort=cr",       "--sort", "mod"];     Last => Ok(SortField::ModifiedDate));
@@ -278,8 +276,8 @@ mod test {
         // Overriding
         test!(overridden:   IgnorePatterns <- ["-I=*.ogg",    "-I", "*.mp3"];  Last => Ok(IgnorePatterns::from_iter(vec![ pat("*.mp3") ])));
         test!(overridden_2: IgnorePatterns <- ["-I", "*.OGG", "-I*.MP3"];      Last => Ok(IgnorePatterns::from_iter(vec![ pat("*.MP3") ])));
-        test!(overridden_3: IgnorePatterns <- ["-I=*.ogg",    "-I", "*.mp3"];  Complain => Err(Misfire::Duplicate(Flag::Short(b'I'), Flag::Short(b'I'))));
-        test!(overridden_4: IgnorePatterns <- ["-I", "*.OGG", "-I*.MP3"];      Complain => Err(Misfire::Duplicate(Flag::Short(b'I'), Flag::Short(b'I'))));
+        test!(overridden_3: IgnorePatterns <- ["-I=*.ogg",    "-I", "*.mp3"];  Complain => Err(Misfire::Duplicate(Flag::Short('I'), Flag::Short('I'))));
+        test!(overridden_4: IgnorePatterns <- ["-I", "*.OGG", "-I*.MP3"];      Complain => Err(Misfire::Duplicate(Flag::Short('I'), Flag::Short('I'))));
     }
 
     mod git_ignores {

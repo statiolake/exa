@@ -68,8 +68,6 @@
 //! --grid --long` shouldn’t complain about `--long` being given twice when
 //! it’s clear what the user wants.
 
-use std::ffi::{OsStr, OsString};
-
 use fs::dir_action::DirAction;
 use fs::filter::FileFilter;
 use output::{details, grid_details, Mode, View};
@@ -115,9 +113,9 @@ impl Options {
     /// struct and a list of free filenames, using the environment variables
     /// for extra options.
     #[allow(unused_results)]
-    pub fn parse<'args, I, V>(args: I, vars: &V) -> Result<(Options, Vec<&'args OsStr>), Misfire>
+    pub fn parse<'args, I, V>(args: I, vars: &V) -> Result<(Options, Vec<&'args str>), Misfire>
     where
-        I: IntoIterator<Item = &'args OsString>,
+        I: IntoIterator<Item = &'args String>,
         V: Vars,
     {
         use options::parser::{Matches, Strictness};
@@ -181,7 +179,6 @@ impl Options {
 pub mod test {
     use super::{flags, Misfire, Options};
     use options::parser::{Arg, MatchedFlags};
-    use std::ffi::OsString;
 
     #[derive(PartialEq, Debug)]
     pub enum Strictnesses {
@@ -207,12 +204,8 @@ pub mod test {
     {
         use self::Strictnesses::*;
         use options::parser::{Args, Strictness};
-        use std::ffi::OsString;
 
-        let bits = inputs
-            .into_iter()
-            .map(|&o| os(o))
-            .collect::<Vec<OsString>>();
+        let bits = inputs.iter().map(|&o| tos(o)).collect::<Vec<String>>();
         let mut result = Vec::new();
 
         if strictnesses == Last || strictnesses == Both {
@@ -229,31 +222,29 @@ pub mod test {
         result
     }
 
-    /// Creates an `OSStr` (used in tests)
+    /// Creates an `str` (used in tests)
     #[cfg(test)]
-    fn os(input: &str) -> OsString {
-        let mut os = OsString::new();
-        os.push(input);
-        os
+    fn tos(input: &str) -> String {
+        input.into()
     }
 
     #[test]
     fn files() {
-        let args = [os("this file"), os("that file")];
+        let args = [tos("this file"), tos("that file")];
         let outs = Options::parse(&args, &None).unwrap().1;
-        assert_eq!(outs, vec![&os("this file"), &os("that file")])
+        assert_eq!(outs, vec![&tos("this file"), &tos("that file")])
     }
 
     #[test]
     fn no_args() {
-        let nothing: Vec<OsString> = Vec::new();
+        let nothing: Vec<String> = Vec::new();
         let outs = Options::parse(&nothing, &None).unwrap().1;
         assert!(outs.is_empty()); // Listing the `.` directory is done in main.rs
     }
 
     #[test]
     fn long_across() {
-        let args = [os("--long"), os("--across")];
+        let args = [tos("--long"), tos("--across")];
         let opts = Options::parse(&args, &None);
         assert_eq!(
             opts.unwrap_err(),
@@ -263,7 +254,7 @@ pub mod test {
 
     #[test]
     fn oneline_across() {
-        let args = [os("--oneline"), os("--across")];
+        let args = [tos("--oneline"), tos("--across")];
         let opts = Options::parse(&args, &None);
         assert_eq!(
             opts.unwrap_err(),

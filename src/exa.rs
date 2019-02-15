@@ -15,16 +15,12 @@ extern crate term_size;
 extern crate unicode_width;
 extern crate zoneinfo_compiled;
 
-#[cfg(feature = "git")]
-extern crate git2;
-
 #[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate log;
 
-use std::env::var_os;
-use std::ffi::{OsStr, OsString};
+use std::env::var;
 use std::io::{stderr, Result as IOResult, Write};
 use std::path::{Component, PathBuf};
 
@@ -56,7 +52,7 @@ pub struct Exa<'args, 'w, W: Write + 'w> {
 
     /// List of the free command-line arguments that should correspond to file
     /// names (anything that isn’t an option).
-    pub args: Vec<&'args OsStr>,
+    pub args: Vec<&'args str>,
 
     /// A global Git cache, if the option was passed in.
     /// This has to last the lifetime of the program, because the user might
@@ -73,14 +69,14 @@ pub struct Exa<'args, 'w, W: Write + 'w> {
 /// the method of looking up environment variables has to be passed in.
 struct LiveVars;
 impl Vars for LiveVars {
-    fn get(&self, name: &'static str) -> Option<OsString> {
-        var_os(name)
+    fn get(&self, name: &'static str) -> Option<String> {
+        var(name).ok()
     }
 }
 
 /// Create a Git cache populated with the arguments that are going to be
 /// listed before they’re actually listed, if the options demand it.
-fn git_options(options: &Options, args: &[&OsStr]) -> Option<GitCache> {
+fn git_options(options: &Options, args: &[&str]) -> Option<GitCache> {
     if options.should_scan_for_git() {
         Some(args.iter().map(PathBuf::from).collect())
     } else {
@@ -100,7 +96,7 @@ fn ignore_cache(options: &Options) -> Option<IgnoreCache> {
 impl<'args, 'w, W: Write + 'w> Exa<'args, 'w, W> {
     pub fn new<I>(args: I, writer: &'w mut W) -> Result<Exa<'args, 'w, W>, Misfire>
     where
-        I: Iterator<Item = &'args OsString>,
+        I: Iterator<Item = &'args String>,
     {
         Options::parse(args, &LiveVars).map(move |(options, mut args)| {
             debug!("Dir action from arguments: {:#?}", options.dir_action);
@@ -110,7 +106,7 @@ impl<'args, 'w, W: Write + 'w> Exa<'args, 'w, W> {
             // List the current directory by default, like ls.
             // This has to be done here, otherwise git_options won’t see it.
             if args.is_empty() {
-                args = vec![OsStr::new(".")];
+                args = vec!["."];
             }
 
             let git = git_options(&options, &args);

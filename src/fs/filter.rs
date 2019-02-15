@@ -2,7 +2,6 @@
 
 use std::cmp::Ordering;
 use std::iter::FromIterator;
-use std::os::unix::fs::MetadataExt;
 use std::path::Path;
 
 use glob;
@@ -238,7 +237,7 @@ impl SortField {
             SortField::Name(AaBbCc) => natord::compare_ignore_case(&a.name, &b.name),
 
             SortField::Size => a.metadata.len().cmp(&b.metadata.len()),
-            SortField::FileInode => a.metadata.ino().cmp(&b.metadata.ino()),
+            SortField::FileInode => Ordering::Equal, // TODO: implement it
             SortField::ModifiedDate => a.modified_time().cmp(&b.modified_time()),
             SortField::AccessedDate => a.accessed_time().cmp(&b.accessed_time()),
             SortField::CreatedDate => a.created_time().cmp(&b.created_time()),

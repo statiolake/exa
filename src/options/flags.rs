@@ -2,49 +2,49 @@ use options::parser::{Arg, Args, TakesValue, Values};
 
 // exa options
 pub static VERSION: Arg = Arg {
-    short: Some(b'v'),
+    short: Some('v'),
     long: "version",
     takes_value: TakesValue::Forbidden,
 };
 pub static HELP: Arg = Arg {
-    short: Some(b'?'),
+    short: Some('?'),
     long: "help",
     takes_value: TakesValue::Forbidden,
 };
 
 // display options
 pub static ONE_LINE: Arg = Arg {
-    short: Some(b'1'),
+    short: Some('1'),
     long: "oneline",
     takes_value: TakesValue::Forbidden,
 };
 pub static LONG: Arg = Arg {
-    short: Some(b'l'),
+    short: Some('l'),
     long: "long",
     takes_value: TakesValue::Forbidden,
 };
 pub static GRID: Arg = Arg {
-    short: Some(b'G'),
+    short: Some('G'),
     long: "grid",
     takes_value: TakesValue::Forbidden,
 };
 pub static ACROSS: Arg = Arg {
-    short: Some(b'x'),
+    short: Some('x'),
     long: "across",
     takes_value: TakesValue::Forbidden,
 };
 pub static RECURSE: Arg = Arg {
-    short: Some(b'R'),
+    short: Some('R'),
     long: "recurse",
     takes_value: TakesValue::Forbidden,
 };
 pub static TREE: Arg = Arg {
-    short: Some(b'T'),
+    short: Some('T'),
     long: "tree",
     takes_value: TakesValue::Forbidden,
 };
 pub static CLASSIFY: Arg = Arg {
-    short: Some(b'F'),
+    short: Some('F'),
     long: "classify",
     takes_value: TakesValue::Forbidden,
 };
@@ -74,32 +74,32 @@ pub static COLOUR_SCALE: Arg = Arg {
 
 // filtering and sorting options
 pub static ALL: Arg = Arg {
-    short: Some(b'a'),
+    short: Some('a'),
     long: "all",
     takes_value: TakesValue::Forbidden,
 };
 pub static LIST_DIRS: Arg = Arg {
-    short: Some(b'd'),
+    short: Some('d'),
     long: "list-dirs",
     takes_value: TakesValue::Forbidden,
 };
 pub static LEVEL: Arg = Arg {
-    short: Some(b'L'),
+    short: Some('L'),
     long: "level",
     takes_value: TakesValue::Necessary(None),
 };
 pub static REVERSE: Arg = Arg {
-    short: Some(b'r'),
+    short: Some('r'),
     long: "reverse",
     takes_value: TakesValue::Forbidden,
 };
 pub static SORT: Arg = Arg {
-    short: Some(b's'),
+    short: Some('s'),
     long: "sort",
     takes_value: TakesValue::Necessary(Some(SORTS)),
 };
 pub static IGNORE_GLOB: Arg = Arg {
-    short: Some(b'I'),
+    short: Some('I'),
     long: "ignore-glob",
     takes_value: TakesValue::Necessary(None),
 };
@@ -114,7 +114,7 @@ pub static DIRS_FIRST: Arg = Arg {
     takes_value: TakesValue::Forbidden,
 };
 pub static ONLY_DIRS: Arg = Arg {
-    short: Some(b'D'),
+    short: Some('D'),
     long: "only-dirs",
     takes_value: TakesValue::Forbidden,
 };
@@ -134,57 +134,57 @@ const SORTS: Values = &[
 
 // display options
 pub static BINARY: Arg = Arg {
-    short: Some(b'b'),
+    short: Some('b'),
     long: "binary",
     takes_value: TakesValue::Forbidden,
 };
 pub static BYTES: Arg = Arg {
-    short: Some(b'B'),
+    short: Some('B'),
     long: "bytes",
     takes_value: TakesValue::Forbidden,
 };
 pub static GROUP: Arg = Arg {
-    short: Some(b'g'),
+    short: Some('g'),
     long: "group",
     takes_value: TakesValue::Forbidden,
 };
 pub static HEADER: Arg = Arg {
-    short: Some(b'h'),
+    short: Some('h'),
     long: "header",
     takes_value: TakesValue::Forbidden,
 };
 pub static INODE: Arg = Arg {
-    short: Some(b'i'),
+    short: Some('i'),
     long: "inode",
     takes_value: TakesValue::Forbidden,
 };
 pub static LINKS: Arg = Arg {
-    short: Some(b'H'),
+    short: Some('H'),
     long: "links",
     takes_value: TakesValue::Forbidden,
 };
 pub static MODIFIED: Arg = Arg {
-    short: Some(b'm'),
+    short: Some('m'),
     long: "modified",
     takes_value: TakesValue::Forbidden,
 };
 pub static BLOCKS: Arg = Arg {
-    short: Some(b'S'),
+    short: Some('S'),
     long: "blocks",
     takes_value: TakesValue::Forbidden,
 };
 pub static TIME: Arg = Arg {
-    short: Some(b't'),
+    short: Some('t'),
     long: "time",
     takes_value: TakesValue::Necessary(Some(TIMES)),
 };
 pub static ACCESSED: Arg = Arg {
-    short: Some(b'u'),
+    short: Some('u'),
     long: "accessed",
     takes_value: TakesValue::Forbidden,
 };
 pub static CREATED: Arg = Arg {
-    short: Some(b'U'),
+    short: Some('U'),
     long: "created",
     takes_value: TakesValue::Forbidden,
 };
@@ -203,7 +203,7 @@ pub static GIT: Arg = Arg {
     takes_value: TakesValue::Forbidden,
 };
 pub static EXTENDED: Arg = Arg {
-    short: Some(b'@'),
+    short: Some('@'),
     long: "extended",
     takes_value: TakesValue::Forbidden,
 };

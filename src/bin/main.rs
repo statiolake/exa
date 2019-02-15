@@ -1,15 +1,14 @@
 extern crate exa;
 use exa::Exa;
 
-use std::env::{args_os, var_os};
-use std::ffi::OsString;
+use std::env::{args, var};
 use std::io::{stderr, stdout, ErrorKind, Write};
 use std::process::exit;
 
 fn main() {
     configure_logger();
 
-    let args: Vec<OsString> = args_os().skip(1).collect();
+    let args: Vec<String> = args().skip(1).collect();
     match Exa::new(args.iter(), &mut stdout()) {
         Ok(mut exa) => {
             match exa.run() {
@@ -55,8 +54,8 @@ pub fn configure_logger() {
     extern crate env_logger;
     extern crate log;
 
-    let present = match var_os(exa::vars::EXA_DEBUG) {
-        Some(debug) => debug.len() > 0,
+    let present = match var(exa::vars::EXA_DEBUG).ok() {
+        Some(debug) => !debug.is_empty(),
         None => false,
     };
 

@@ -42,7 +42,7 @@ pub mod test {
         let blox = f::Blocks::None;
         let expected = TextCell::blank(Green.italic());
 
-        assert_eq!(expected, blox.render(&TestColours).into());
+        assert_eq!(expected, blox.render(&TestColours));
     }
 
     #[test]
@@ -50,6 +50,6 @@ pub mod test {
         let blox = f::Blocks::Some(3005);
         let expected = TextCell::paint_str(Red.blink(), "3005");
 
-        assert_eq!(expected, blox.render(&TestColours).into());
+        assert_eq!(expected, blox.render(&TestColours));
     }
 }

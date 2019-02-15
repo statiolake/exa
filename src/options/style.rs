@@ -126,7 +126,6 @@ fn parse_color_vars<V: Vars>(vars: &V, colours: &mut Colours) -> (ExtensionMappi
     let mut exts = ExtensionMappings::default();
 
     if let Some(lsc) = vars.get(vars::LS_COLORS) {
-        let lsc = lsc.to_string_lossy();
         LSColors(lsc.as_ref()).each_pair(|pair| {
             if !colours.set_ls(&pair) {
                 match glob::Pattern::new(pair.key) {
@@ -140,8 +139,6 @@ fn parse_color_vars<V: Vars>(vars: &V, colours: &mut Colours) -> (ExtensionMappi
     let mut use_default_filetypes = true;
 
     if let Some(exa) = vars.get(vars::EXA_COLORS) {
-        let exa = exa.to_string_lossy();
-
         // Is this hacky? Yes.
         if exa == "reset" || exa.starts_with("reset:") {
             use_default_filetypes = false;
@@ -206,7 +203,6 @@ mod terminal_test {
     use super::*;
     use options::flags;
     use options::parser::{Arg, Flag};
-    use std::ffi::OsString;
 
     use options::test::parse_for_test;
     use options::test::Strictnesses::*;
@@ -251,8 +247,8 @@ mod terminal_test {
     test!(no_u_never:    ["--color", "never"];   Both => Ok(TerminalColours::Never));
 
     // Errors
-    test!(no_u_error:    ["--color=upstream"];   Both => err Misfire::BadArgument(&flags::COLOR, OsString::from("upstream"))); // the error is for --color
-    test!(u_error:       ["--colour=lovers"];    Both => err Misfire::BadArgument(&flags::COLOR, OsString::from("lovers"))); // and so is this one!
+    test!(no_u_error:    ["--color=upstream"];   Both => err Misfire::BadArgument(&flags::COLOR, String::from("upstream"))); // the error is for --color
+    test!(u_error:       ["--colour=lovers"];    Both => err Misfire::BadArgument(&flags::COLOR, String::from("lovers"))); // and so is this one!
 
     // Overriding
     test!(overridden_1:  ["--colour=auto", "--colour=never"];  Last => Ok(TerminalColours::Never));
@@ -343,7 +339,6 @@ mod colour_test {
 
 #[cfg(test)]
 mod customs_test {
-    use std::ffi::OsString;
 
     use super::*;
     use options::Vars;
@@ -409,13 +404,13 @@ mod customs_test {
 
     // Test impl that just returns the value it has.
     impl Vars for MockVars {
-        fn get(&self, name: &'static str) -> Option<OsString> {
+        fn get(&self, name: &'static str) -> Option<String> {
             use options::vars;
 
             if name == vars::LS_COLORS && !self.ls.is_empty() {
-                OsString::from(self.ls.clone()).into()
+                String::from(self.ls).into()
             } else if name == vars::EXA_COLORS && !self.exa.is_empty() {
-                OsString::from(self.exa.clone()).into()
+                String::from(self.exa).into()
             } else {
                 None
             }
