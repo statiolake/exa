@@ -3,6 +3,7 @@
 use std::fs;
 use std::io::Error as IOError;
 use std::io::Result as IOResult;
+use std::os::windows::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use fs::dir::Dir;
@@ -307,10 +308,11 @@ impl<'dir> File<'dir> {
 
     /// This file’s last modified timestamp.
     pub fn modified_time(&self) -> f::Time {
-        // TODO: impelement it
+        // TODO: support time zone
+        let (seconds, nanoseconds) = nt_to_unix_epoch(self.metadata.creation_time());
         f::Time {
-            seconds: 0,
-            nanoseconds: 0,
+            seconds,
+            nanoseconds,
         }
     }
 
@@ -394,6 +396,13 @@ impl<'dir> File<'dir> {
     pub fn name_is_one_of(&self, choices: &[&str]) -> bool {
         choices.contains(&&self.name[..])
     }
+}
+
+fn nt_to_unix_epoch(nt: u64) -> (i64, i64) {
+    let nt = nt as i64;
+    let nanoseconds = (nt % 1000_000_0) * 100;
+    let seconds = nt / 1000_000_0 - 11644473600;
+    (seconds, nanoseconds)
 }
 
 impl<'a> AsRef<File<'a>> for File<'a> {
